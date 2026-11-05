@@ -35,6 +35,7 @@ void Save(void* raw) {
     table.insert_or_assign("voice_language", current.voice_language);
     table.insert_or_assign("master_volume", current.master_volume);
     table.insert_or_assign("bloom_effect", current.bloom_effect);
+    table.insert_or_assign("aspect_ratio", current.aspect_ratio);
     toml::table enhancements;
     enhancements.insert_or_assign("scorpion_unfiltered", current.scorpion_unfiltered);
     table.insert_or_assign("enhancements", enhancements);
