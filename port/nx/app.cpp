@@ -10,6 +10,7 @@
 #include <toml++/toml.hpp>
 
 #include "core/log.h"
+#include "aspect_ratio.h"
 #include "quick_menu.h"
 #include "nx/platform.h"
 #include "runtime_paths.h"
@@ -100,7 +101,10 @@ void Save() {
     g_table.insert_or_assign("display", d);
     nx::SavePlatform(&g_table);
     if (kGame.save) kGame.save(&g_table);
-    std::ofstream(openshao::paths::Config()) << g_table << "\n";
+    std::ofstream settings(openshao::paths::Config(), std::ios::trunc);
+    settings << "# Aspect ratio options: \"original\" (4:3), \"auto\", \"16:9\", \"16:10\", \"21:9\", \"32:9\".\n"
+            << "# Example: aspect_ratio = \"16:9\".\n"
+            << g_table << "\n";
 }
 
 void LogSettings() { LOGR("settings: %s", (std::ostringstream() << g_table).str().c_str()); }
@@ -127,7 +131,7 @@ float RenderScale(uint32_t guest_height) {
     return float(Output().height) * float(Get().render_percent) / 100.0f / float(guest_height);
 }
 
-bool Widescreen() { return true; }
+bool Widescreen() { return openshao::aspect::Current() > openshao::aspect::Original + .0001f; }
 
 std::filesystem::path ExeDir() { return nx::kRoot; }
 int Instance() { return 0; }
