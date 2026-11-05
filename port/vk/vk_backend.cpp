@@ -34,6 +34,7 @@
 #include <dxgiformat.h>
 
 #include "app/app.h"
+#include "aspect_ratio.h"
 #include "core/diag.h"
 #include "core/log.h"
 #include "gpu/backend.h"
@@ -3308,7 +3309,7 @@ void VulkanBackend::DrawFrame(Target* t, Image& out, uint32_t w, uint32_t h) {
     VkClearRect cr{{{0, 0}, {w, h}}, 0, 1};
     vkCmdClearAttachments(Cmd(), 1, &ca, 1, &cr);
     if (t) {
-        const float aspect = app::Widescreen() ? 16.0f / 9.0f : 4.0f / 3.0f;
+        const float aspect = openshao::aspect::Output(w, h);
         const float vw = std::min(float(w), float(h) * aspect), vh = vw / aspect;
         // the target's barrier ends this rendering instance; the blit begins another
         Transition(*t, Use::Sampled);
