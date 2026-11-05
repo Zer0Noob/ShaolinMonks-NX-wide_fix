@@ -18,7 +18,6 @@ toml::table Disk() {
     } catch (const std::exception&) {
         return {};
     }
-}
 }  // namespace
 
 bool Show() { return true; }
@@ -27,8 +26,6 @@ bool ShouldPersist() { return true; }
 void Load(const void* raw) {
     const auto& table = *static_cast<const toml::table*>(raw);
     current = Read(table);
-    // the title's own 16:9 mode already lays out the picture, HUD and menus; upstream's ratios would scale them again
-    current.aspect_ratio = "original";
     controller::Load(raw);
 }
 
