@@ -1,0 +1,91 @@
+name: Build Shaolin Monks NX (Switch)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/widescreen-aspect-ratio
+    paths:
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - "port/**"
+      - "tools/**"
+      - ".github/workflows/build-switch-nro.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # This project needs a locally installed Switch/NVK toolchain and the user's
+    # legally obtained default.xbe. Do not run this job on a GitHub-hosted runner.
+    runs-on: [self-hosted, linux, x64]
+    env:
+      SHAOLIN_XBE_PATH: ${{ vars.SHAOLIN_XBE_PATH }}
+      DEVKITPRO: ${{ vars.DEVKITPRO }}
+      NVK_SDK: ${{ vars.NVK_SDK }}
+      GLSLANG_NX_DIR: ${{ vars.GLSLANG_NX_DIR }}
+
+    steps:
+      - name: Check local build environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in SHAOLIN_XBE_PATH DEVKITPRO NVK_SDK GLSLANG_NX_DIR; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Repository variable $name is not configured."
+              exit 1
+            fi
+          done
+          test -f "$SHAOLIN_XBE_PATH" || { echo "::error::default.xbe not found at SHAOLIN_XBE_PATH"; exit 1; }
+          test -x "$DEVKITPRO/devkitA64/bin/aarch64-none-elf-g++"
+          test -f "$NVK_SDK/lib/libvulkan.a"
+          test -f "$GLSLANG_NX_DIR/glslangConfig.cmake"
+          command -v clang++-19
+          command -v cmake
+          command -v ninja
+          command -v python3
+
+      - name: Checkout source and pinned submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Generate game code from the local XBE
+        shell: bash
+        run: |
+          set -euo pipefail
+          tools/codegen.sh "$SHAOLIN_XBE_PATH"
+
+      - name: Configure Nintendo Switch build
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S . -B build/nx -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DPORT_PLATFORM=switch \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/switch.cmake \
+            -DDEVKITPRO="$DEVKITPRO" \
+            -DNVK_SDK="$NVK_SDK" \
+            -Dglslang_DIR="$GLSLANG_NX_DIR"
+
+      - name: Compile NRO
+        shell: bash
+        run: cmake --build build/nx --parallel 2
+
+      - name: Verify NRO
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s build/nx/shaolinmonks.nro
+          ls -lh build/nx/shaolinmonks.nro
+          sha256sum build/nx/shaolinmonks.nro
+
+      - name: Upload NRO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shaolinmonks-nx-widescreen-${{ github.sha }}
+          path: build/nx/shaolinmonks.nro
+          if-no-files-found: error
+          retention-days: 14
